@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.3
+
+**Factory-image downloads work again for ESP32 devices on ESPHome 2026.7+.** Since 1.7.2 added support for ESPHome's newer ESP32 build toolchain, downloading a factory firmware image (as opposed to a direct OTA update) for those devices failed with "no firmware binary was found," even though the compile itself succeeded. OTA updates were unaffected. Factory-image downloads now work correctly for ESP32, ESP8266, RP2040, and LibreTiny targets across all supported ESPHome versions.
+
 ## 1.7.2
 
 **Newer ESPHome releases now compile.** ESPHome 2026.7.0 requires Python 3.12 or newer, but the add-on and its build workers still shipped on Python 3.11 — so every compile pinned to 2026.7.0 failed at the install step with "No matching distribution found," before any firmware was built. Even once that was cleared, ESP32 builds hit a second wall: 2026.7 replaced its build toolchain with a native ESP-IDF installer that needs a system library the image didn't carry, so ESP32 firmware still wouldn't compile. Both are fixed — the add-on now runs on Python 3.13 with the required libraries, and current and upcoming ESPHome versions install and compile normally across ESP32, ESP8266, RP2040, and LibreTiny targets. **Remote build workers must rebuild their Docker image** to pick up the new runtime — a worker still on the old image shows as needing an upgrade in the Workers list and won't take jobs until it's rebuilt; the built-in worker updates automatically with the add-on.

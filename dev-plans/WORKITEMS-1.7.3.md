@@ -1,0 +1,13 @@
+# Work Items — 1.7.3
+
+Theme: **Hotfix.** Single targeted bug fix, cut directly from `main` (v1.7.2) rather than waiting on `develop`'s 1.8 (LLM assistance) cycle — this project has no standing patch-stream process, so this release establishes the pattern: a `fix/*` branch off `main`, PR'd and tagged independently, then merged back into `develop` so the fix isn't lost when 1.8 ships.
+
+---
+
+## Open Bugs
+
+- [x] **#243** *(1.7.3-dev.1)* — *Factory-image download jobs fail with "Compile succeeded but no firmware binary was found under .pioenvs/ — nothing to archive" on ESP32 targets pinned to ESPHome 2026.7+, even though the compile log shows `firmware.factory.bin`/`firmware.ota.bin` were created.* OTA-upload jobs on the same ESPHome version work fine — the asymmetry was the diagnostic clue. **Root cause:** `_collect_firmware_variants` (`ha-addon/client/client.py`) only ever looked in `.esphome/build/<device>/.pioenvs/<device>/`. Bug #240 (1.7.2) already established that ESPHome 2026.7 replaced PlatformIO with a native ESP-IDF toolchain for ESP32 — that toolchain doesn't create a `.pioenvs/<device>/` staging dir at all; binaries land straight under `.esphome/build/<device>/build/`. `_archive_firmware_to_server` is called `required=False` after `esphome run` (OTA path, `client.py:1781`) so a resolution miss there only logs a WARNING and the job still reports success; the download-only path calls it `required=True` (`client.py:1696`), so the same miss failed the job outright. **Fix:** `_collect_firmware_variants` now checks both the legacy PlatformIO layout and the new ESP-IDF-native `build/`-direct layout (first match wins), covering Arduino/LibreTiny (still PlatformIO) and ESP-IDF-native ESP32 targets alike. Error log wording broadened from ".pioenvs/" to ".esphome/build/" since that's no longer the only place searched. This is the narrow fix; `dev-plans/WORKITEMS-future.md`'s **EH.1** (replace the hardcoded walk with ESPHome's own `esphome idedata` JSON output) remains the long-term robustification for future build-layout changes. Regression nets: `tests/test_client.py` (`_collect_firmware_variants` unit tests — legacy layout, ESP-IDF-native layout, neither-present) + `tests/test_e2e_client.py::TestFirmwareUploadOrdering::test_download_only_succeeds_on_espidf_native_layout` (full `run_job` path against a fake ESPHome writing the new layout).
+
+## Follow-up
+
+- **Merge back into `develop` after this tags.** `develop` is already mid-1.8-cycle and doesn't have this fix. After `v1.7.3` is tagged, merge `main` into `develop` (or cherry-pick this commit) so the 1.8 release doesn't regress bug #243. Also file/close the now-superseded 1.8-cycle copy of this bug if one was opened there.
